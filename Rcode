@@ -1,0 +1,122 @@
+# To be used with R
+# Install and load required packages
+library(leaflet)
+library(htmlwidgets)
+library(htmltools)
+
+# Create data frames for each group of locations
+customer_dep <- data.frame(  
+  station = c("Streeter Dr & Grand Ave", "Lake Shore Dr & Monroe St", "Shedd Aquarium", 
+              "Millennium Park", "Michigan Ave & Oak St"),
+  lat = c(41.8923, 41.8807, 41.8672, 41.8826, 41.9009),
+  lon = c(-87.6120, -87.6167, -87.6140, -87.6233, -87.6238),
+  type = "Customer Departure"
+)
+
+customer_arr <- data.frame(
+  station = c("Streeter Dr & Grand Ave", "Lake Shore Dr & Monroe St", "Millennium Park", 
+              "Shedd Aquarium", "Michigan Ave & Oak St"),
+  lat = c(41.8923, 41.8807, 41.8826, 41.8672, 41.9009),
+  lon = c(-87.6120, -87.6167, -87.6233, -87.6140, -87.6238),
+  type = "Customer Arrival"
+)
+
+subscriber_dep <- data.frame(
+  station = c("Clinton St & Washington Blvd", "Clinton St & Madison St", "Canal St & Adams St", 
+              "Canal St & Madison St", "Columbus Dr & Randolph St"),
+  lat = c(41.8833, 41.8817, 41.8793, 41.8821, 41.8847),
+  lon = c(-87.6412, -87.6412, -87.6399, -87.6399, -87.6203),
+  type = "Subscriber Departure"
+)
+
+subscriber_arr <- data.frame(
+  station = c("Clinton St & Washington Blvd", "Clinton St & Madison St", "Canal St & Adams St", 
+              "Canal St & Madison St", "Kingsbury St & Kinzie St"),
+  lat = c(41.8833, 41.8817, 41.8793, 41.8821, 41.8892),
+  lon = c(-87.6412, -87.6412, -87.6399, -87.6399, -87.6385),
+  type = "Subscriber Arrival"
+)
+
+# Create map of Chicago
+chicago_map <- leaflet() %>%
+  setView(lng = -87.6298, lat = 41.8781, zoom = 13) %>%
+  addTiles()
+
+# Create icons (using AwesomeMarkers)
+icons <- awesomeIcons(
+  icon = c("circle", "play", "circle", "play"),
+  iconColor = "white",
+  markerColor = c("blue", "blue", "green", "green"),
+  library = "fa"
+)
+
+# Add markers
+chicago_map <- chicago_map %>%
+  # Customer Departures (Blue Circle)
+  addAwesomeMarkers(
+    data = customer_dep,
+    lng = ~lon, lat = ~lat,
+    popup = ~paste(type, ":", station),
+    icon = awesomeIcons(icon = "circle", iconColor = "white", markerColor = "blue", library = "fa"),
+    group = "Customer Departures",
+    clusterOptions = markerClusterOptions()
+  ) %>%
+  # Customer Arrivals (Blue Triangle)
+  addAwesomeMarkers(
+    data = customer_arr,
+    lng = ~lon, lat = ~lat,
+    popup = ~paste(type, ":", station),
+    icon = awesomeIcons(icon = "play", iconColor = "white", markerColor = "blue", library = "fa"),
+    group = "Customer Arrivals",
+    clusterOptions = markerClusterOptions()
+  ) %>%
+  # Subscriber Departures (Green Circle)
+  addAwesomeMarkers(
+    data = subscriber_dep,
+    lng = ~lon, lat = ~lat,
+    popup = ~paste(type, ":", station),
+    icon = awesomeIcons(icon = "circle", iconColor = "white", markerColor = "green", library = "fa"),
+    group = "Subscriber Departures",
+    clusterOptions = markerClusterOptions()
+  ) %>%
+  # Subscriber Arrivals (Green Triangle)
+  addAwesomeMarkers(
+    data = subscriber_arr,
+    lng = ~lon, lat = ~lat,
+    popup = ~paste(type, ":", station),
+    icon = awesomeIcons(icon = "play", iconColor = "white", markerColor = "green", library = "fa"),
+    group = "Subscriber Arrivals",
+    clusterOptions = markerClusterOptions()
+  )
+
+# Add layer 
+chicago_map <- chicago_map %>%
+  addLayersControl(
+    overlayGroups = c("Customer Departures", "Customer Arrivals", 
+                      "Subscriber Departures", "Subscriber Arrivals"),
+    options = layersControlOptions(collapsed = FALSE)
+  )
+
+# Legend
+legend_html <- paste0(
+  '<div style="position: fixed; bottom: 50px; left: 50px; z-index: 1000; padding: 10px; ',
+  'background-color: white; border: 2px solid grey; border-radius: 5px;">',
+  '<h4>Bike Share Stations Legend</h4>',
+  '<p><i class="fa fa-circle" style="color:blue"></i> Customer Departure</p>',
+  '<p><i class="fa fa-play" style="color:blue"></i> Customer Arrival</p>',
+  '<p><i class="fa fa-circle" style="color:green"></i> Subscriber Departure</p>',
+  '<p><i class="fa fa-play" style="color:green"></i> Subscriber Arrival</p>',
+  '</div>'
+)
+
+chicago_map <- chicago_map %>%
+  htmlwidgets::onRender(
+    paste0("
+      function(el, x) {
+        document.getElementById(el.id).innerHTML += '", legend_html, "';
+      }
+    ")
+  )
+
+# Save as an HTML file
+saveWidget(chicago_map, file = "chicago_bike_share_map.html")
